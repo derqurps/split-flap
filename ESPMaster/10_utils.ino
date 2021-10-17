@@ -1,3 +1,8 @@
+void checkForRestart() {
+  if (restartNow) {
+    ESP.restart();
+  }
+}
 
 String centerString(String message) {
   String emptySpace;

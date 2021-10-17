@@ -1,37 +1,3 @@
-void loadFSValues() {
-  // Load values saved in LittleFS
-  alignment = readFile(LittleFS, alignmentPath);
-  speedslider = readFile(LittleFS, speedsliderPath);
-  devicemode = readFile(LittleFS, devicemodePath);
-}
-
-String getCurrentInputValues() {
-  values["alignment"] = alignment;
-  values["speedSlider"] = speedslider;
-  values["devicemode"] = devicemode;
-
-  String jsonString = JSON.stringify(values);
-  return jsonString;
-}
-
-
-// Initialize WiFi
-void initWiFi() {
-  WiFi.mode(WIFI_STA);
-  WiFi.hostname("SplitFlap");
-  WiFi.begin(ssid, password);
-#ifdef serial
-  Serial.print("Connecting to WiFi ..");
-#endif
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print('.');
-    delay(1000);
-  }
-#ifdef serial
-  Serial.println(WiFi.localIP());
-#endif
-}
-
 
 // Initialize LittleFS
 void initFS() {
@@ -75,4 +41,20 @@ void writeFile(fs::FS &fs, const char * path, const char * message) {
   } else {
     Serial.println("- frite failed");
   }
+}
+
+void loadFSValues() {
+  // Load values saved in LittleFS
+  alignment = readFile(LittleFS, alignmentPath);
+  flapSpeed = readFile(LittleFS, flapspeedPath);
+  devicemode = readFile(LittleFS, devicemodePath);
+}
+
+String getCurrentInputValues() {
+  values["alignment"] = alignment;
+  values["speedSlider"] = flapSpeed;
+  values["devicemode"] = devicemode;
+
+  String jsonString = JSON.stringify(values);
+  return jsonString;
 }

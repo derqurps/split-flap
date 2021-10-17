@@ -1,9 +1,23 @@
+void setupi2c() {
+  Wire.begin(4, 5);
+}
+
+void updateFlapData() {
+  //Mode Selection
+    if (devicemode == "text") {
+      showNewData(flaptext);
+    } else if (devicemode == "date") {
+      showDate();
+    } else if (devicemode == "clock") {
+      showClock();
+    }
+}
+
 //checks for new message to show
 void showNewData(String message) {
   if (writtenLast != message) {
-    showMessage(message, convertSpeed(speedslider));
+    showMessage(message, convertSpeed(flapSpeed));
   }
-  writtenLast = message;
 }
 
 //pushes message to units
@@ -19,26 +33,28 @@ void showMessage(String message, int flapSpeed) {
   }
 
   // wait while display is still moving
-  while (isDisplayMoving()) {
+  if(isDisplayMoving()) {
 #ifdef serial
     Serial.println("wait for display to stop");
 #endif
     delay(500);
-  }
+  } else {
 
-  Serial.println(message);
-  for (int i = 0; i < UNITSAMOUNT; i++) {
-    char currentLetter = message[i];
-    int currentLetterPosition = translateLettertoInt(currentLetter);
-#ifdef serial
-    Serial.print("Unit Nr.: ");
-    Serial.print(i);
-    Serial.print(" Letter: ");
-    Serial.print(message[i]);
-    Serial.print(" Letter position: ");
-    Serial.println(currentLetterPosition);
-#endif
-    writeToUnit(i, currentLetterPosition, flapSpeed);
+    Serial.println(message);
+    for (int i = 0; i < UNITSAMOUNT; i++) {
+      char currentLetter = message[i];
+      int currentLetterPosition = translateLettertoInt(currentLetter);
+  #ifdef serial
+      Serial.print("Unit Nr.: ");
+      Serial.print(i);
+      Serial.print(" Letter: ");
+      Serial.print(message[i]);
+      Serial.print(" Letter position: ");
+      Serial.println(currentLetterPosition);
+  #endif
+      writeToUnit(i, currentLetterPosition, flapSpeed);
+    }
+    writtenLast = message;
   }
 }
 
