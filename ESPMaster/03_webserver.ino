@@ -43,6 +43,41 @@ void webSetup() {
     json = String();
   });
 
+AsyncCallbackJsonWebHandler* jsonHandler = new AsyncCallbackJsonWebHandler("/json", [](AsyncWebServerRequest *request, JsonVariant &json) {
+
+    JsonObject object = json.as<JsonObject>();
+    if (object.containsKey(PARAM_ALIGNMENT)) {
+      alignment = object[PARAM_ALIGNMENT].as<String>();
+      writeFile(LittleFS, alignmentPath, alignment.c_str());
+    }
+    if (object.containsKey(PARAM_SPEED)) {
+      flapSpeed = object[PARAM_SPEED].as<String>();
+      writeFile(LittleFS, flapspeedPath, flapSpeed.c_str());
+    }
+    if (object.containsKey(PARAM_DEVICEMODE)) {
+      devicemode = object[PARAM_DEVICEMODE].as<String>();
+      writeFile(LittleFS, devicemodePath, devicemode.c_str());
+    }
+    if (object.containsKey(PARAM_TEXT)) {
+      flaptext = object[PARAM_TEXT].as<String>();
+      writeFile(LittleFS, flaptextPath, flaptext.c_str());
+    }
+    
+    String retjson = getCurrentInputValues();
+    request->send(200, "application/json", retjson);
+    retjson = String();
+    
+    /*AsyncResponseStream *response = request->beginResponseStream("application/json");
+    DynamicJsonDocument doc2(1024);
+    //JsonObject &root = jsonBuffer.createObject();
+    doc2["heap"] = ESP.getFreeHeap();
+    doc2["ssid"] = WiFi.SSID();
+    serializeJson(object, *response);
+    request->send(response);*/
+  });
+
+  server.addHandler(jsonHandler);
+
   server.on("/", HTTP_POST, [](AsyncWebServerRequest * request) {
     int params = request->params();
     for (int i = 0; i < params; i++) {
@@ -52,44 +87,45 @@ void webSetup() {
         // HTTP POST alignment value
         if (p->name() == PARAM_ALIGNMENT) {
           alignment = p->value().c_str();
-#ifdef serial
-          Serial.print("Alignment set to: ");
-          Serial.println(alignment);
-#endif
+          #ifdef serial
+            Serial.print("Alignment set to: ");
+            Serial.println(alignment);
+          #endif
           writeFile(LittleFS, alignmentPath, alignment.c_str());
         }
 
         // HTTP POST speed slider value
         if (p->name() == PARAM_SPEED) {
           flapSpeed = p->value().c_str();
-#ifdef serial
-          Serial.print("Speed set to: ");
-          Serial.println(flapSpeed);
-#endif
+          #ifdef serial
+            Serial.print("Speed set to: ");
+            Serial.println(flapSpeed);
+          #endif
           writeFile(LittleFS, flapspeedPath, flapSpeed.c_str());
         }
 
         // HTTP POST mode value
         if (p->name() == PARAM_DEVICEMODE) {
           devicemode = p->value().c_str();
-#ifdef serial
-          Serial.print("Mode set to: ");
-          Serial.println(devicemode);
-#endif
+          #ifdef serial
+            Serial.print("Mode set to: ");
+            Serial.println(devicemode);
+          #endif
           writeFile(LittleFS, devicemodePath, devicemode.c_str());
         }
 
         // HTTP POST input1 value
         if (p->name() == PARAM_TEXT) {
-          flaptext = p->value().c_str();
-#ifdef serial
-          Serial.print("flaptext set to: ");
-          Serial.println(flaptext);
-#endif
+          flaptext = p->value();
+          #ifdef serial
+            Serial.print("flaptext set to: ");
+            Serial.println(flaptext);
+          #endif
+          writeFile(LittleFS, flaptextPath, flaptext.c_str());
         }
       }
     }
-    request->send(LittleFS, "/index.html", "text/html");
+    request->send(200);
   });
   
   server.on("/update", HTTP_GET, indexrequest);

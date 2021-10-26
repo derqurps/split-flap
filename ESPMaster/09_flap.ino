@@ -15,7 +15,7 @@ void updateFlapData() {
 
 //checks for new message to show
 void showNewData(String message) {
-  if (writtenLast != message) {
+  if (writtenLast != message || (devicemode == "text" && lastAlignment != alignment) ) {
     showMessage(message, convertSpeed(flapSpeed));
   }
 }
@@ -23,40 +23,87 @@ void showNewData(String message) {
 //pushes message to units
 void showMessage(String message, int flapSpeed) {
 
-  //Format string per alignment choice
-  if (alignment == "left") {
-    message = leftString(message);
-  } else if (alignment == "right") {
-    message = rightString(message);
-  } else if (alignment == "center") {
-    message = centerString(message);
-  }
-
   // wait while display is still moving
   if(isDisplayMoving()) {
-#ifdef serial
-    Serial.println("wait for display to stop");
-#endif
+    #ifdef serial
+      Serial.println("wait for display to stop");
+    #endif
     delay(500);
   } else {
+    
+    message = cleanString(message);
+    
+    #ifdef serial
+      Serial.println(message);
+    #endif
+    
+    long msgArray[UNITSAMOUNT];
+    int count = convertToUnicode(message, msgArray);
+    
+    long formattedArray[UNITSAMOUNT];
+    
+    //Format string per alignment choice
+    if (alignment == "left") {
+      leftString(msgArray, formattedArray, count);
+    } else if (alignment == "right") {
+      rightString(msgArray, formattedArray, count);
+    } else if (alignment == "center") {
+      centerString(msgArray, formattedArray, count);
+    } else {
+      centerString(msgArray, formattedArray, count);
+    }
 
-    Serial.println(message);
     for (int i = 0; i < UNITSAMOUNT; i++) {
-      char currentLetter = message[i];
-      int currentLetterPosition = translateLettertoInt(currentLetter);
-  #ifdef serial
-      Serial.print("Unit Nr.: ");
-      Serial.print(i);
-      Serial.print(" Letter: ");
-      Serial.print(message[i]);
-      Serial.print(" Letter position: ");
-      Serial.println(currentLetterPosition);
-  #endif
+  
+      int currentLetterPosition = translateLettertoInt((char)formattedArray[i]);
+
+      #ifdef serial
+        Serial.print("Unit Nr.: ");
+        Serial.print(count);
+        Serial.print(" Letter: ");
+        Serial.print((char)formattedArray[i]);
+        Serial.print(" Letter position: ");
+        Serial.println(currentLetterPosition);
+      #endif
       writeToUnit(i, currentLetterPosition, flapSpeed);
     }
     writtenLast = message;
+    lastAlignment = alignment;
   }
 }
+
+int convertToUnicode(String message, long *returnvar) {
+  
+  int maxamount = message.length();
+  int count = 0;
+  for (int i = 0; i < maxamount; i++) {
+
+    long unicodeVal = 0;
+    int countBytes = 1;
+    if (message[i]>=194 && message[i] <=223) {
+      countBytes = 2;
+    } else if (message[i]>=224 && message[i] <=239) {
+      countBytes = 3;
+    } else if (message[i]>=240 && message[i] <=255) {
+      countBytes = 4;
+    }
+    int usize = (countBytes*2)+2;
+    char unicode[usize];
+    unicode[0] = '0';
+    unicode[1] = 'x';
+    for (int j=0;j<countBytes;j++) {
+      String cl = String(message[(i+j)], HEX);
+      unicode[((j*2)+2)] = cl[0];
+      unicode[((j*2)+3)] = cl[1];
+    }
+    unicodeVal = strtol(unicode, 0, 16); //convert the string
+    returnvar[count]=unicodeVal;
+    count++;
+    i = i + (countBytes - 1);
+  }
+  return count;
+}
+
 
 //translates char to letter position
 int translateLettertoInt(char letterchar) {

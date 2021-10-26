@@ -3,41 +3,57 @@ void checkForRestart() {
     ESP.restart();
   }
 }
-
-String centerString(String message) {
-  String emptySpace;
-  int messageLength = message.length();
-  int emptySpaceAmount = (UNITSAMOUNT - messageLength) / 2;
-  for (int i = 0; i < emptySpaceAmount; i++) {
-    emptySpace = " " + emptySpace;
+//aligns string center of array
+void centerString(long *inputmsg, long *returnvar, int count) {
+  if (count < UNITSAMOUNT) {
+    int emptySpaceAmount = (UNITSAMOUNT - count) / 2;
+    
+    for (int i = 0; i < UNITSAMOUNT; i++) {
+      if (i >=emptySpaceAmount && i< (count+emptySpaceAmount)) {
+        returnvar[i] = inputmsg[i-emptySpaceAmount];
+      } else {
+        returnvar[i] = (long)' ';
+      }
+    }
+  } else {
+    for (int i = 0; i < UNITSAMOUNT; i++) {
+      returnvar[i] = inputmsg[i];
+    }
   }
-  message = emptySpace + message;
-  message = cleanString(message);
-  return message;
 }
 
-String rightString(String message) {
-  message = cleanString(message);
-  return message;
+//aligns string on right side of array and fills empty chars with spaces
+void rightString(long *inputmsg, long *returnvar, int count) {
+  if (count < UNITSAMOUNT) {
+    for (int i = 0; i < UNITSAMOUNT; i++) {
+      if(i<(UNITSAMOUNT-count)) {
+        returnvar[i] = (long)' ';
+      } else {
+        returnvar[i] = inputmsg[(i-(UNITSAMOUNT-count))];
+      }
+    }
+  } else {
+    for (int i = 0; i < UNITSAMOUNT; i++) {
+      returnvar[i] = inputmsg[i];
+    }
+  }
 }
 
 //aligns string on left side of array and fills empty chars with spaces
-String leftString(String message) {
-  message = cleanString(message);
-
-  char leftAlignString[UNITSAMOUNT + 1];
-
-  for (int i = 0; i < UNITSAMOUNT + 1; i++) {
-    if (i < message.length()) {
-      leftAlignString[i] = message[i];
-    } else if (i == UNITSAMOUNT) {
-      leftAlignString[i] = '\0';
-    } else {
-      leftAlignString[i] = ' ';
+void leftString(long *inputmsg, long *returnvar, int count) {
+  if (count < UNITSAMOUNT) {
+    for (int i = 0; i < UNITSAMOUNT; i++) {
+      if(i<count) {
+        returnvar[i] = inputmsg[i];
+      } else {
+        returnvar[i] = (long)' ';
+      }
+    }
+  } else {
+    for (int i = 0; i < UNITSAMOUNT; i++) {
+      returnvar[i] = inputmsg[i];
     }
   }
-  //Serial.println(leftAlignString);
-  return leftAlignString;
 }
 
 //converts input string to uppercase

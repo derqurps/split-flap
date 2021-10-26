@@ -69,8 +69,10 @@ void callback(String topic, byte* message, unsigned int length) {
     flapSpeed = fs;
   }
   if(doc["flaptext"]) {
-    // TODO
     String ft = doc["flaptext"];
+    if (ft.length() > UNITSAMOUNT) {
+      ft = ft.substring(0,9);
+    }
     flaptext = ft;
     
   }

@@ -13,13 +13,14 @@
 #include <Wire.h>
 #include <PubSubClient.h>
 #include <ArduinoOTA.h>
+#include "AsyncJson.h"
 #include <ArduinoJson.h>
 #include <ezTime.h>
 #include <FastLED.h>
 
 #define UNITSAMOUNT 10 // !IMPORTANT! Amount of connected units, change this if you have a different amount of units connected
 
-#define serial //uncomment for serial debug messages, no serial messages if this whole line is a comment!
+//#define serial //uncomment for serial debug messages, no serial messages if this whole line is a comment!
 
 #define BAUDRATE 115200
 #define ANSWERSIZE 1 //Size of units request answer
@@ -29,7 +30,7 @@
 #define ESPLED 1 //Blue LED on ESP01
 
 //Variables to save values from HTML form
-String alignment;
+String alignment = "center";
 String flapSpeed;
 String devicemode;
 String flaptext;

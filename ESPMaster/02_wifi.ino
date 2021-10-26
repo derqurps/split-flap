@@ -10,7 +10,7 @@ void initWiFi() {
     Serial.print('.');
     delay(1000);
   }
-  waitForSync();
+  waitForSync(10);
 #ifdef serial
   Serial.println(WiFi.localIP());
 #endif

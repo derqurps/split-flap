@@ -1,0 +1,20 @@
+{
+  "name": "tester",
+  "version": "1.0.0",
+  "description": "",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bent": "^7.3.12",
+    "form-data": "^4.0.0",
+    "form-data-encoder": "^1.6.0",
+    "formdata-node": "^4.3.1",
+    "got": "^11.8.2",
+    "request": "^2.88.2"
+  }
+}

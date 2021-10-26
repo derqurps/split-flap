@@ -48,12 +48,14 @@ void loadFSValues() {
   alignment = readFile(LittleFS, alignmentPath);
   flapSpeed = readFile(LittleFS, flapspeedPath);
   devicemode = readFile(LittleFS, devicemodePath);
+  flaptext = readFile(LittleFS, flaptextPath);
 }
 
 String getCurrentInputValues() {
   values["alignment"] = alignment;
   values["speedSlider"] = flapSpeed;
   values["devicemode"] = devicemode;
+  values["flaptext"] = flaptext;
 
   String jsonString = JSON.stringify(values);
   return jsonString;
