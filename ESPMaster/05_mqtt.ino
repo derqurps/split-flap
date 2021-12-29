@@ -52,6 +52,15 @@ void callback(String topic, byte* message, unsigned int length) {
       dm == "date" ||
       dm == "clock")
     {
+      if (dm == "text" && doc["txtcountdown"]) {
+        // save data and "start countdown"
+        alignmentSV = alignment;
+        flapSpeedSV = flapSpeed;
+        devicemodeSV = devicemode;
+        flaptextSV = flaptext;
+        unsigned long currentMillis = millis();
+        countdownSV = currentMillis + doc["txtcountdown"].as<long>();
+      }
       devicemode = dm;
     }
   }
@@ -80,6 +89,15 @@ void callback(String topic, byte* message, unsigned int length) {
 }
 
 void mqttLoopOps() {
+  unsigned long currentMillis = millis();
+  // reset data after countdown
+  if (currentMillis != 0 && currentMillis > countdownSV) {
+    currentMillis = 0;
+    alignment = alignmentSV;
+    flapSpeed = flapSpeedSV;
+    devicemode = devicemodeSV;
+    flaptext = flaptextSV;
+  }
   if (!client.connected()) {
     reconnect();
   }

@@ -35,6 +35,13 @@ String flapSpeed;
 String devicemode;
 String flaptext;
 
+String alignmentSV;
+String flapSpeedSV;
+String devicemodeSV;
+String flaptextSV;
+
+long countdownSV;
+
 WiFiClient espClient;
 PubSubClient client(espClient);
 
