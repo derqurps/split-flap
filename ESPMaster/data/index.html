@@ -1,76 +1,167 @@
 <!DOCTYPE html>
 <html>
-	<head>
-		<title>Split-Flap</title>
-		<meta name="viewport" content="width=device-width, initial-scale=1" charset="utf-8" />
-		<link rel="icon" type="image/png" href="favicon.png" />
-		<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.7.2/css/all.css"
-    integrity="sha384- fnmOCqbTlWIlj8LyTjo7mOUStjsKC4pOpQbqyi7RrhN7udi9RwhKkMHpvLbHG9Sr" crossorigin="an onymous" />
-		<link rel="stylesheet" type="text/css" href="style.css" />
-	</head>
-	<body>
-		<div class="topnav">
-			<h1>SPLIT-FLAP</h1>
-		</div>
-		<div class="content">
-			<div class="card-grid">
-				<div class="card">
-					<form action="/" method="post" id="form">
+
+<head>
+	<title>Split-Flap</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1" charset="utf-8" />
+	<link rel="icon" type="image/png" href="favicon.png" />
+	<link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+
+<body>
+	<div class="topnav float-container">
+		<h1 class="float-left">Split Flap UI</h1>
+		<h4 class="float-right" style="text-align: right;">
+			Version: <label id="labelVersion">N/A</label>
+			<br>
+			Units: <label id="labelUnits">N/A</label>
+			<br>
+			Last Received: <label id="labelLastMessageReceived">N/A</label>
+		</h4>
+	</div>
+	<div class="content">
+		<div id="initialLoading" class="lds-facebook"><div></div><div></div><div></div></div>
+
+		<div id="loadedContent" class="hidden">
+			<div id="bannerMessage" class="banner-message hidden"></div>
+
+			<form action="/" method="post" id="form">
+				<div class="card-grid">
+					<div class="card">
 						<p class="card-title">General</p>
-						<p style= "font-size: 1.2rem;">Text Alignment</p>
-						<div class ="alignmentInputs">
+						<p style="font-size: 1.2rem;">Text Alignment</p>
+						<div class="alignment-inputs">
 							<p>
-								<input type="radio" id="textleft" name="alignment" autocomplete="off" value="left" /> 
-								<label for="textleft">left-aligned</label> 
+								<input type="radio" id="radioLeft" name="alignment" autocomplete="off" value="left" />
+								<label for="radioLeft">Left</label>
 							</p>
 							<p>
-								<input type="radio" id="textcenter" name="alignment" autocomplete="off" value="center" />
-								<label for="textcenter">centered</label> 							
+								<input type="radio" id="radioCenter" name="alignment" autocomplete="off" value="center" />
+								<label for="radioCenter">Center</label>
 							</p>
 							<p>
-								<input type="radio" id="textright" name="alignment" autocomplete="off" value="right" />
-								<label for="textright">right-aligned</label>
+								<input type="radio" id="radioRight" name="alignment" autocomplete="off" value="right" />
+								<label for="radioRight">Right</label>
 							</p>
 						</div>
 
 						<div style="margin-top: 2em;">
-							<label for="SpeedSlider">Flap Speed</label>
-							<p class="switch"/>
+							<label for="rangeFlapSpeed">Flap Speed</label>
+							<p class="switch" />
 
-							<input type="range" oninput="updateSpeedSlider(this)" id="SpeedSlider" name="speedslider" min="1" max="100" step="1" value="80" class="slider" />
-							<p class="state">Speed: 
-								<span id="textSpeedSliderValue"/> &percnt;</p>
+							<input type="range" oninput="updateSpeedSlider(this)" id="rangeFlapSpeed" name="flapSpeed"
+								min="1" max="100" step="1" value="80" class="slider" />
+							<p class="state">Speed:
+								<span id="rangeFlapSpeedValue" />80 &percnt;
+							</p>
 						</div>
 					</div>
+
 					<div class="card">
-						<p class="card-title">Text</p>       
-						<input type="radio" id="modetext" name="devicemode" value="text" />
-						<label for="modetext">Text Mode</label> 
+						<p class="card-title">Modes</p>
 						<p>
-							<label for="input1">Input 1</label> 
-							<input type="text" id="input1" name="input1" autocomplete="off" maxlength="10" /> 
-							<input type="submit" value="Submit" />
+							<input onchange="setDeviceModeTab(this.value)" type="radio" id="modeClock" name="deviceMode" value="clock" />
+							<label for="modeClock">Clock Mode</label>
 						</p>
-					</div>
-					<div class="card">
-						<p class="card-title">Date</p>
-						<div class = "devicemode">
-							<input type="radio" id="modedate" name="devicemode" value="date" />
-							<label for="modedate">Date Mode</label> 
+
+						<p>
+							<input onchange="setDeviceModeTab(this.value)" type="radio" id="modeDate" name="deviceMode" value="date" />
+							<label for="modeDate">Date Mode</label>
+						</p>
+
+						<p>
+							<input onchange="setDeviceModeTab(this.value)" type="radio" id="modeCountdown" name="deviceMode" value="countdown" />
+							<label for="modeCountdown">Countdown Mode</label>
+						</p>
+
+						<p>
+							<input onchange="setDeviceModeTab(this.value)" type="radio" id="modeText" name="deviceMode" value="text" />
+							<label for="modeText">Text Mode</label>
+						</p>
+						
+						<div id="tab-text" class="tab">
+							<p>
+								<label for="inputText"></label>
+								<input type="text" id="inputText" name="inputText" onkeyup="updateCharacterCount()" autocomplete="off" maxlength="75" />
+								<span class="count">
+									<label id="labelCharacterCount">0</label> Character(s)
+								</span>
+								<span class="count">
+									<label id="labelLineCount">1</label> line(s)
+								</span>
+								<span>
+									<input type="button" value="+ Newline" onclick="addNewline()"/>
+								</span>
+							</p>
+
+							<p>
+								<label for="inputCheckboxScheduleEnabled">Schedule Message?</label>
+								<input type="checkbox" id="inputCheckboxScheduleEnabled" name="scheduleEnabled"	onchange="showHideScheduledMessageInput()" />
+								<div id="divScheduleOptions" class="hidden">
+									<p>
+										<label for="scheduledDateTime">Show Indefinitely?</label>
+										<input type="checkbox" id="inputCheckboxShowIndefinitely" name="scheduleShowIndefinitely" />
+									</p>
+									<p>
+										<input type="datetime-local" id="inputScheduledDateTime" name="scheduleDateTime">
+										<input type="hidden" id="inputHiddenScheduledDateTimeUnix" name="scheduledDateTimeUnix" value="0" />
+									</p>
+								</div>
+							</p>				
 						</div>
-					</div>
-					<div class="card">
-						<p class="card-title">Clock</p>
-						<div class = "devicemode">
-							<input type="radio" id="modeclock" name="devicemode" value="clock" />
-							<label for="modeclock">Clock Mode</label> 
+
+						<div id="tab-countdown" class="tab hidden">
+							<p>
+								<label for="inputCountdownDateTime">Countdown End Date</label>
+								<br>
+								<input type="date" id="inputCountdownDateTime" name="countdownDateTime">
+								<input type="hidden" id="inputHiddenCountdownDateTimeUnix" name="countdownDateTimeUnix" value="0" />
+							</p>
 						</div>
-						<p/>
-					</div>	
-				</form>		
+		
+						<p>
+							<div id="containerSubmit">
+								<input type="submit" value="Submit" />
+							</div>
+						</p>		
+					</div>
+				</div>
+			</form>
+
+			<div class="card-grid">
+				<div class="card card-full">
+					<p class="card-title">Actions</p>
+
+					<div class="actions">
+						<a id="linkActionOtaUpdate" href="/ota" onclick="return confirm('Are you sure you want to put device in OTA mode?')">
+							OTA Update
+						</a>
+						<a id="linkActionReboot" href="/reboot" onclick="return confirm('Are you sure you want reboot device?')">
+							Reboot
+						</a>
+						<a id="linkActionUnitCalibration" href="/reset-units" onclick="return confirm('Are you sure you want to Reset Units?')">
+							Reset Unit Calibration
+						</a>
+						<a id="linkActionResetWifi" href="/reset-wifi" onclick="return confirm('Are you sure you want to Reset WiFi settings?')">
+							Reset WiFi
+						</a>
+					</div>
+				</div>
 			</div>
+
+			<form>
+				<div class="card-grid">
+					<div class="card card-full">
+						<p class="card-title">Scheduled Messages (<span id="spanScheduledMessageCount">0</span>)</p>
+
+						<div id="containerScheduledMessages" class="scheduled-messages">
+						</div>
+					</div>
+				</div>
+			</form>
 		</div>
-		<script src="script.js"/>
-	</script>
+	</div>
+	<script src="script.js" /></script>
 </body>
+
 </html>
