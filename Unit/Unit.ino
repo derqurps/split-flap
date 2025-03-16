@@ -32,10 +32,17 @@
 #define OVERHEATINGTIMEOUT 2 //timeout in seconds to avoid overheating of stepper. After starting rotation, the counter will start. Stepper won't move again until timeout is passed
 unsigned long lastRotation = 0;
 
+#ifdef SERIAL_ENABLE
+//Serial input stuff
+const byte numChars = 32;
+char receivedChars[numChars]; // an array to store the received data
+boolean newData = false;
+#endif
+
 //globals
 int displayedLetter = 0; //currently shown letter
 int desiredLetter = 0; //letter to be shown
-const String letters[] = {" ", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "Ä", "Ö", "Ü", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ".", "-", "?", "!"};
+const char letters[] = {' ', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', 'Ä', 'Ö', 'Ü', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', '.', '-', '?', '!'};
 Stepper stepper(STEPS, STEPPERPIN1, STEPPERPIN3, STEPPERPIN2, STEPPERPIN4); //stepper setup
 bool lastInd1 = false; //store last status of phase
 bool lastInd2 = false; //store last status of phase
@@ -45,13 +52,28 @@ float missedSteps = 0; //cummulate steps <1, to compensate via additional step w
 int currentlyrotating = 0; // 1 = drum is currently rotating, 0 = drum is standing still
 int stepperSpeed = 10; //current speed of stepper, value only for first homing
 int eeAddress = 0;   //EEPROM address for calibration offset
-int calOffset;       //Offset for calibration in steps, stored in EEPROM, gets read in setup
+uint16_t calOffset;       //Offset for calibration in steps, stored in EEPROM, gets read in setup
 int receivedNumber = 0;
 int i2cAddress;
 
 //sleep globals
 const unsigned long WAIT_TIME = 2000;    //wait time before sleep routine gets executed again in milliseconds
 unsigned long previousMillis = 0;       //stores last time sleep was interrupted
+
+//test calibration settings
+#if defined(SERIAL_ENABLE) || defined(TEST_ENABLE)
+int calLetters[10] = {0, 26, 1, 21, 14, 43, 30, 31, 32, 39};
+//int calLetters[10] = {0, 6, 1, 5, 0};
+
+void run_test() {
+  stepperSpeed = 12;
+  for (int i = 0; i < 10; i++) {
+    int currentCalLetter = calLetters[i];
+    rotateToLetter(currentCalLetter);
+    delay(2000);
+  }
+}
+#endif
 
 //setup
 void setup() {
@@ -82,14 +104,9 @@ void setup() {
   getOffset();     //get calibration offset from EEPROM
   calibrate(true); //home stepper after startup
 
-  //test calibration settings
 #ifdef TEST_ENABLE
-  int calLetters[10] = {0, 26, 1, 21, 14, 43, 30, 31, 32, 39};
-  for (int i = 0; i < 10; i++) {
-    int currentCalLetter = calLetters[i];
-    rotateToLetter(currentCalLetter);
-    delay(5000);
-  }
+  // Run test on startup
+  run_test();
 #endif
 }
 
@@ -99,13 +116,17 @@ void loop() {
     byte old_ADCSRA = ADCSRA;
     // disable ADC
     ADCSRA = 0;
-    set_sleep_mode (SLEEP_MODE_PWR_DOWN);
-    sleep_enable();
 #ifdef SERIAL_ENABLE
+    set_sleep_mode (SLEEP_MODE_IDLE);
+#else
+    set_sleep_mode (SLEEP_MODE_PWR_DOWN);
+#endif
+    sleep_enable();
+#ifndef SERIAL_ENABLE
     digitalWrite (LED_BUILTIN, LOW); // shuts off LED when starting to sleep, for debugging
 #endif
     sleep_cpu ();
-#ifdef SERIAL_ENABLE
+#ifndef SERIAL_ENABLE
     digitalWrite (LED_BUILTIN, HIGH); // turns on LED when waking up, for debugging
 #endif
     sleep_disable();
@@ -134,6 +155,25 @@ void loop() {
     //rotate to new letter
     rotateToLetter(receivedNumber);
   }
+
+#ifdef SERIAL_ENABLE
+  // check if we got calibration data via serial
+  recvWithEndMarker();
+#endif
+}
+
+int translateLettertoInt(char letterchar) {
+  // automatically convert lower case to upper case
+  if ('a' <= letterchar && letterchar <= 'z') {
+    letterchar -= 32;
+  }
+  for (int flapIndex = 0; flapIndex < sizeof(letters); flapIndex++) {
+    if (letterchar == letters[flapIndex]) {
+      return flapIndex;
+    }
+  }
+
+  return -1;
 }
 
 //rotate to letter
@@ -147,7 +187,7 @@ void rotateToLetter(int toLetter) {
     posCurrentLetter = displayedLetter;
     //int amountLetters = sizeof(letters) / sizeof(String);
 #ifdef SERIAL_ENABLE
-    Serial.print("go to letter: ");
+    Serial.print(F("go to letter: "));
     Serial.println(letters[toLetter]);
 #endif
     //go to letter, but only if available (>-1)
@@ -176,7 +216,7 @@ void rotateToLetter(int toLetter) {
       else {
         //full rotation is needed, good time for a calibration
 #ifdef SERIAL_ENABLE
-        Serial.println("full rotation incl. calibration");
+        Serial.println(F("full rotation incl. calibration"));
 #endif
         calibrate(false); //calibrate revolver and do not stop motor
         //startMotor();
@@ -208,14 +248,22 @@ void rotateToLetter(int toLetter) {
 }
 
 void receiveLetter(int numBytes) {
-  int receiveArray[2]; //array for received bytes
+  int receiveArray[4]; //array for received bytes
+  uint16_t newCalOffset = 0;
 
-  for (int i = 0; i < numBytes; i++) {
+  for (int i = 0; i < numBytes && i < 4; i++) {
     receiveArray[i] = Wire.read();
   }
   //Write received bytes to correct variables
   receivedNumber = receiveArray[0];
   stepperSpeed = receiveArray[1];
+  if (numBytes >= 4) {
+    newCalOffset = receiveArray[2] + (receiveArray[3] << 8);
+    if (newCalOffset != calOffset) {
+      calOffset = newCalOffset;
+      writeToEEPROM(calOffset);
+    }
+  }
 }
 
 void requestEvent() {
@@ -239,8 +287,11 @@ int getaddress() {
 //gets magnet sensor offset from EEPROM in steps
 void getOffset() {
   EEPROM.get(eeAddress, calOffset);
+  if (calOffset < 0) {
+    calOffset = 0;
+  }
 #ifdef SERIAL_ENABLE
-  Serial.print("CalOffset from EEPROM: ");
+  Serial.print(F("CalOffset from EEPROM: "));
   Serial.print(calOffset);
   Serial.println();
 #endif
@@ -249,7 +300,7 @@ void getOffset() {
 //doing a calibration of the revolver using the hall sensor
 int calibrate(bool initialCalibration) {
 #ifdef SERIAL_ENABLE
-  Serial.println("calibrate revolver");
+  Serial.println(F("calibrate revolver"));
 #endif
   currentlyrotating = 1; //set active state to active
   bool reachedMarker = false;
@@ -273,7 +324,7 @@ int calibrate(bool initialCalibration) {
       displayedLetter = 0;
       missedSteps = 0;
 #ifdef SERIAL_ENABLE
-      Serial.println("revolver calibrated");
+      Serial.println(F("revolver calibrated"));
 #endif
       //Only stop motor for initial calibration
       if (initialCalibration) {
@@ -287,7 +338,7 @@ int calibrate(bool initialCalibration) {
       desiredLetter = 0;
       reachedMarker = true;
 #ifdef SERIAL_ENABLE
-      Serial.println("calibration revolver failed");
+      Serial.println(F("calibration revolver failed"));
 #endif
       stopMotor();
       return -1;
@@ -309,7 +360,7 @@ void stopMotor() {
   digitalWrite(STEPPERPIN3, LOW);
   digitalWrite(STEPPERPIN4, LOW);
 #ifdef SERIAL_ENABLE
-  Serial.println("Motor Stop");
+  Serial.println(F("Motor Stop"));
 #endif
   currentlyrotating = 0; //set active state to not active
   delay(100);
@@ -317,7 +368,7 @@ void stopMotor() {
 
 void startMotor() {
 #ifdef SERIAL_ENABLE
-  Serial.println("Motor Start");
+  Serial.println(F("Motor Start"));
 #endif
   currentlyrotating = 1; //set active state to active
   digitalWrite(STEPPERPIN1, lastInd1);
@@ -325,3 +376,68 @@ void startMotor() {
   digitalWrite(STEPPERPIN3, lastInd3);
   digitalWrite(STEPPERPIN4, lastInd4);
 }
+
+
+void writeToEEPROM(uint16_t offsetValue) {
+  //One simple call, with the address first and the object second.
+  EEPROM.put(eeAddress, offsetValue);
+
+#ifdef SERIAL_ENABLE
+  Serial.print(F("Value written to EEPROM: "));
+  Serial.print(calOffset);
+  Serial.println();
+#endif
+}
+
+#ifdef SERIAL_ENABLE
+void recvWithEndMarker() {
+  static byte ndx = 0;
+  char endMarker = '\n';
+  char rc;
+
+  while (Serial.available() > 0 && newData == false) {
+    rc = Serial.read();
+
+    if (rc != endMarker) {
+      receivedChars[ndx] = rc;
+      ndx++;
+      if (ndx >= numChars) {
+        ndx = numChars - 1;
+      }
+    }
+    else {
+      receivedChars[ndx] = '\0'; // terminate the string
+      ndx = 0;
+      newData = true;
+    }
+  }
+
+  if (newData == true) {
+    newData = false;
+    if (receivedChars[0] != 0x00 && receivedChars[1] == 0x00) {
+      auto new_letter = translateLettertoInt(receivedChars[0]);
+      if (new_letter == -1) {
+        Serial.println(F("Letter not found in index"));
+      } else {
+        stepperSpeed = 12;
+        receivedNumber = new_letter;
+      }
+    } else if (strncmp(receivedChars, "test", numChars) == 0) {
+      Serial.println(F("Starting calibration test"));
+      calibrate(true);
+      run_test();
+    } else {
+      // convert to int
+      calOffset = String(receivedChars).toInt();
+      // check if the integer conversion failed
+      if (calOffset == 0 && receivedChars[0] != '0') {
+        Serial.println(F("Invalid Command"));
+      } else {
+        // save to eeprom
+        writeToEEPROM(calOffset);
+        calibrate(true);
+      }
+    }
+  }
+}
+#endif

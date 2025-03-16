@@ -35,6 +35,7 @@
   on your network. This will try and setup your device with a static IP address of your chosing. See below for more details.
 */
 #define WIFI_STATIC_IP      false
+//#define FAE_MOD                   //Option for the modified PCB that includes an ESP-12F module
 
 /* .--------------------------------------------------------. */
 /* | ___         _               ___       __ _             | */
@@ -148,7 +149,7 @@ IPAddress wifiPrimaryDns(8, 8, 8, 8);
   behave a little strange.
 */
 //The current version of code to display on the UI
-const char* espVersion = "2.2.0";
+const char* espVersion = "2.3.0";
 
 //All the letters on the units that we have to be displayed. You can change these if it so pleases at your own risk
 const char letters[] = {' ', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z', '$', '&', '#', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', ':', '.', '-', '?', '!'};
@@ -224,13 +225,19 @@ void setup() {
 #if SERIAL_ENABLE == true
   //Setup so we can see serial messages
   Serial.begin(SERIAL_BAUDRATE);
-#else
+#elif !defined(FAE_MOD)
   //For ESP01 only
   Wire.begin(1, 3); 
   
   //De-activate I2C if debugging the ESP, otherwise serial does not work
   //Wire.begin(D1, D2); //For NodeMCU testing only SDA=D1 and SCL=D2
 #endif
+
+#ifdef FAE_MOD
+  //Fae Mod
+  Wire.begin(4, 5);
+#endif
+
   SerialPrintln("");
   SerialPrintln("#######################################################");
   SerialPrintln("..............Split Flap Display Starting..............");
@@ -355,9 +362,10 @@ void setup() {
 
       bool submissionError = false;
       
-      long newMessageScheduleDateTimeUnixValue;
-      bool newMessageScheduleEnabledValue, newMessageScheduleShowIndefinitely;
-      String newAlignmentValue, newDeviceModeValue, newFlapSpeedValue, newInputTextValue, newCountdownToDateUnixValue;
+      bool newMessageScheduleEnabledValue, newMessageScheduleShowIndefinitely = false;
+      long newMessageScheduleDateTimeUnixValue = -1;
+      String newAlignmentValue, newDeviceModeValue, newFlapSpeedValue, newInputTextValue, newCountdownToDateUnixValue = "";
+      bool hasNewInputTextValue = false;
       
       int params = request->params();
       for (int paramIndex = 0; paramIndex < params; paramIndex++) {
@@ -395,6 +403,7 @@ void setup() {
           //HTTP POST inputText value
           if (p->name() == PARAM_INPUT_TEXT) {
             newInputTextValue = p->value().c_str();
+            hasNewInputTextValue = true;
           }
 
           //HTTP POST Schedule Enabled
@@ -450,7 +459,7 @@ void setup() {
         lastReceivedMessageDateTime = timezone.dateTime("d M y H:i:s");
 
         //Only if a new alignment value
-        if (alignment != newAlignmentValue) {
+        if (newAlignmentValue != "" && alignment != newAlignmentValue) {
           alignment = newAlignmentValue;
           alignmentUpdated = true;
 
@@ -459,7 +468,7 @@ void setup() {
         }
 
         //Only if a new flap speed value
-        if (flapSpeed != newFlapSpeedValue) {
+        if (newFlapSpeedValue != "" && flapSpeed != newFlapSpeedValue) {
           flapSpeed = newFlapSpeedValue;
 
           writeFile(LittleFS, flapSpeedPath, flapSpeed.c_str());
@@ -467,7 +476,7 @@ void setup() {
         }
 
         //Only if countdown date has changed
-        if (countdownToDateUnix != newCountdownToDateUnixValue) {
+        if (newCountdownToDateUnixValue != "" && countdownToDateUnix != newCountdownToDateUnixValue) {
           countdownToDateUnix = newCountdownToDateUnixValue;
 
           writeFile(LittleFS, countdownPath, countdownToDateUnix.c_str());
@@ -482,7 +491,7 @@ void setup() {
         }
         else {
           //Only if device mode has changed
-          if (deviceMode != newDeviceModeValue) {
+          if (newDeviceModeValue != "" && deviceMode != newDeviceModeValue) {
             deviceMode = newDeviceModeValue;
 
             writeFile(LittleFS, deviceModePath, deviceMode.c_str());
@@ -490,7 +499,7 @@ void setup() {
           }
 
           //Only if we are showing text
-          if (deviceMode == DEVICE_MODE_TEXT) {
+          if (hasNewInputTextValue && deviceMode == DEVICE_MODE_TEXT) {
             inputText = newInputTextValue;
           }
         }
